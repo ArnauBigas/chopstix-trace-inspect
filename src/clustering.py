@@ -42,3 +42,5 @@ def dbscan(trace, epsilon):
         silhouette_score = metrics.silhouette_score(distance_matrix, labels,
                                                     metric="precomputed")
         print("Silhouette Coefficient: %0.3f" % silhouette_score)
+
+    return labels
