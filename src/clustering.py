@@ -7,7 +7,7 @@ import math
 from src.distance import disjoint_sets
 
 def estimate_dbscan_epsilon(trace, coverage):
-    n = trace.get_subtrace_count()
+    n = trace.get_invocation_count()
 
     print("Finding eps parameter based on coverage of %f..." % coverage)
     distance_matrix = trace.get_distance_matrix(disjoint_sets)
@@ -37,7 +37,7 @@ def dbscan(trace, epsilon):
     n_noise_ = list(labels).count(-1)
 
     print('Estimated number of clusters: %d' % n_clusters_)
-    print('Estimated number of noise points: %d (%f%%)' % (n_noise_, n_noise_*100/len(trace.subtraces)))
+    print('Estimated number of noise points: %d (%f%%)' % (n_noise_, n_noise_*100/trace.get_invocation_count()))
     if n_clusters_ > 1:
         silhouette_score = metrics.silhouette_score(distance_matrix, labels,
                                                     metric="precomputed")

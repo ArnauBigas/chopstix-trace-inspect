@@ -20,4 +20,18 @@ epsilon = args.epsilon
 if epsilon == None:
     epsilon = estimate_dbscan_epsilon(trace, args.coverage)
 
-dbscan(trace, epsilon)
+labels = dbscan(trace, epsilon)
+
+clusters = {}
+for i in range(len(labels)):
+    label = labels[i]
+
+    if label not in clusters:
+        clusters[label] = []
+
+    clusters[label].append(i)
+
+for cluster in clusters:
+    print("Cluster %2d" % cluster)
+    print("----------")
+    print(clusters[cluster])

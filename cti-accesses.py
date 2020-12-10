@@ -16,13 +16,13 @@ args = parser.parse_args()
 
 trace = Trace(args.trace_file)
 
-print("Plotting %d subtraces" % trace.get_subtrace_count())
+print("Plotting %d invocations" % trace.get_invocation_count())
 
 x = []
 y = []
-for n in range(0, trace.get_subtrace_count()):
-    subtrace = trace.subtraces[n]
-    for page in subtrace.pages:
+for n in range(trace.get_invocation_count()):
+    invocation = trace.invocations[n]
+    for page in invocation.pages:
         x.append(n)
         y.append(page)
 
@@ -33,16 +33,16 @@ if args.clustered:
 
     cluster_indices = dbscan(trace, epsilon)
     colors = []
-    for i in range(0, trace.get_subtrace_count()):
+    for i in range(trace.get_invocation_count()):
         index = cluster_indices[i]
-        for j in range(0, len(trace.subtraces[i].pages)):
+        for j in range(len(trace.invocations[i].pages)):
             colors.append(index if index > -1 else 7)
 
     plt.scatter(x, y, label="Page Access", c=colors)
 else:
     plt.scatter(x, y, label="Page Access")
 
-plt.xlabel("Subtrace ID")
+plt.xlabel("Invocation ID")
 plt.ylabel("Page Address")
 #plt.legend(loc='upper left')
 plt.grid(True)

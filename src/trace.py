@@ -8,7 +8,7 @@ def process_work(trace, start, end, n, distance_function):
     matrix = np.zeros((end - start, n), 'float32')
     for i in range(start, end):
         for j in range(0, n):
-            matrix[i-start, j] = distance_function(trace.subtraces[i], trace.subtraces[j])
+            matrix[i-start, j] = distance_function(trace.invocations[i], trace.invocations[j])
     return matrix
 
 class Trace:
@@ -20,15 +20,21 @@ class Trace:
         f.close()
 
         pages = iter_unpack('<q', raw_data)
-        self.subtraces = []
-        current_trace = SubTrace()
+        self.invocations = []
+        current_invocation = None
         for page, in pages:
-            if page == -1:
-                current_trace = SubTrace()
+            if page == -3:
+                if current_invocation is not None:
+                    current_invocation.generate_pages()
+                    self.invocations.append(current_invocation)
+
+                current_invocation = Invocation()
+            elif page == -1:
+                current_subtrace = SubTrace()
             elif page == -2:
-                self.subtraces.append(current_trace)
+                current_invocation.add_subtrace(current_subtrace)
             else:
-                current_trace.addPage(page)
+                current_subtrace.add_page(page)
 
         if dmatrix_nproc == None:
             dmatrix_nproc = os.cpu_count()
@@ -36,12 +42,15 @@ class Trace:
         self.dmatrix_nproc = dmatrix_nproc
 
     def get_subtrace_count(self):
-        return len(self.subtraces)
+        return sum(len(invocation.subtraces) for invocation in self.invocations)
+
+    def get_invocation_count(self):
+        return len(self.invocations)
 
     def get_distance_matrix(self, distance_function):
         if self.distance_matrix_generated == False:
-            n = len(self.subtraces)
-            nprocs =  min(n, self.dmatrix_nproc)
+            n = self.get_invocation_count()
+            nprocs = min(n, self.dmatrix_nproc)
 
             # Generate distance matrix in parallel
             print("Generating distance matrix with %d threads" % nprocs)
@@ -55,9 +64,25 @@ class Trace:
 
         return self.distance_matrix
 
+class Invocation:
+    def __init__(self):
+        self.subtraces = []
+
+    def add_subtrace(self, subtrace):
+        self.subtraces.append(subtrace)
+
+    def generate_pages(self):
+        pages = set()
+
+        for trace in self.subtraces:
+            for page in trace.pages:
+                pages.add(page)
+
+        self.pages = list(pages)
+
 class SubTrace:
     def __init__(self):
         self.pages = []
 
-    def addPage(self, address):
+    def add_page(self, address):
         self.pages.append(address)

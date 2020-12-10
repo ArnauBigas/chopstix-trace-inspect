@@ -16,10 +16,10 @@ args = parser.parse_args()
 
 trace = Trace(args.trace_file, args.num_threads)
 
-print("Analyzing %d subtraces" % trace.get_subtrace_count())
+print("Analyzing %d subtraces in %d invocations" % (trace.get_subtrace_count(), trace.get_invocation_count()))
 
 if (args.metric == 'count'):
-    page_counts = list(map(lambda x: len(x.pages), trace.subtraces))
+    page_counts = list(map(lambda x: len(x.pages), trace.invocations))
     print("Page count mean: %f, std. dev.: %f" % (mean(page_counts), stdev(page_counts)))
 
     print(np.unique(page_counts))
@@ -29,8 +29,8 @@ elif (args.metric == 'distance'):
     distance_matrix = trace.get_distance_matrix(disjoint_sets)
 
     distances = []
-    for i in range(0, len(trace.subtraces)):
-        for j in range(i, len(trace.subtraces)):
+    for i in range(trace.get_invocation_count()):
+        for j in range(i, trace.get_invocation_count()):
             distances.append(distance_matrix[i, j])
 
     plt.plot(range(len(distances)), np.sort(distances))
@@ -39,8 +39,8 @@ elif args.metric == 'nearest_neighbour':
     distance_matrix = trace.get_distance_matrix(disjoint_sets)
 
     distances = []
-    for i in range(0, len(trace.subtraces)):
-        distances.append(min([distance_matrix[i, j] for j in range(0, len(trace.subtraces)) if j != i]))
+    for i in range(trace.get_invocation_count()):
+        distances.append(min([distance_matrix[i, j] for j in range(trace.get_invocation_count()) if j != i]))
 
-    plt.plot(range(len(trace.subtraces)), np.sort(distances))
+    plt.plot(range(trace.get_invocation_count()), np.sort(distances))
     plt.show()
