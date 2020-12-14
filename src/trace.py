@@ -36,6 +36,9 @@ class Trace:
             else:
                 current_subtrace.add_page(page)
 
+        if current_invocation is not None:
+            self.invocations.append(current_invocation)
+
         if dmatrix_nproc == None:
             dmatrix_nproc = os.cpu_count()
 
