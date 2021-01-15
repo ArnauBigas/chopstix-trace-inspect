@@ -68,6 +68,9 @@ class Trace:
 
         return self.distance_matrix
 
+    def estimate_needed_memory(self):
+        return (self.get_invocation_count()**2) * 8 # 8 bytes per element (double)
+
 class Invocation:
     def __init__(self):
         self.subtraces = []
