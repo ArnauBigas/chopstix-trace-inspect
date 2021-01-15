@@ -37,6 +37,7 @@ class Trace:
                 current_subtrace.add_page(page)
 
         if current_invocation is not None:
+            current_invocation.generate_pages()
             self.invocations.append(current_invocation)
 
         if dmatrix_nproc == None:
