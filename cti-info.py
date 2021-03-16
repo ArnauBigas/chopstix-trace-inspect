@@ -10,5 +10,6 @@ args = parser.parse_args()
 trace = Trace(args.trace_file)
 
 print("Trace parsed.")
-print("Invocation Count: ", trace.get_invocation_count())
 print("Subtrace Count:   ", trace.get_subtrace_count())
+print("Invocation Count: ", trace.get_invocation_count())
+print("Distinct Invocations Count: ", trace.get_invocation_set_count())

@@ -26,7 +26,7 @@ for trace_file in args.trace_files:
             print("Need more memory than allowed to process trace: %d out of %d" % (needed, args.max_memory))
             continue
 
-    print("Clustering %d invocations" % trace.get_invocation_count())
+    print("Clustering %d invocations (%d sets)" % (trace.get_invocation_count(), trace.get_invocation_set_count()))
 
     epsilon = args.epsilon
     if epsilon == None:
@@ -45,6 +45,6 @@ for trace_file in args.trace_files:
 
     if not args.summary:
         for cluster in clusters:
-            print("Cluster %2d" % cluster)
+            print("Cluster %d" % cluster)
             print("----------")
             print(clusters[cluster])

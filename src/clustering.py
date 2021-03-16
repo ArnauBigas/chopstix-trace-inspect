@@ -37,7 +37,7 @@ def dbscan(trace, epsilon):
     n_noise_ = list(labels).count(-1)
 
     print('Estimated number of clusters: %d' % n_clusters_)
-    print('Estimated number of noise points: %d (%f%%)' % (n_noise_, n_noise_*100/trace.get_invocation_count()))
+    print('Estimated number of noise points: %d (%f%%)' % (n_noise_, n_noise_*100/trace.get_invocation_set_count()))
     if n_clusters_ > 1:
         silhouette_score = metrics.silhouette_score(distance_matrix, labels,
                                                     metric="precomputed")

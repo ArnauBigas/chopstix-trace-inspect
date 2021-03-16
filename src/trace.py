@@ -1,6 +1,8 @@
 import numpy as np
 from struct import iter_unpack
 from multiprocessing import Pool
+from threading import Lock
+from concurrent.futures import ThreadPoolExecutor
 from math import ceil
 import os
 
@@ -8,13 +10,14 @@ def process_work(trace, start, end, n, distance_function):
     matrix = np.zeros((end - start, n), 'float32')
     for i in range(start, end):
         for j in range(0, n):
-            matrix[i-start, j] = distance_function(trace.invocations[i], trace.invocations[j])
+            matrix[i-start, j] = distance_function(trace.invocation_sets[i], trace.invocation_sets[j])
     return matrix
 
 class Trace:
     distance_matrix_generated = False
 
     def __init__(self, filename, dmatrix_nproc = os.cpu_count()):
+        print("Parsing trace...")
         f = open(filename, 'rb')
         raw_data = f.read()
         f.close()
@@ -28,7 +31,7 @@ class Trace:
                     current_invocation.generate_pages()
                     self.invocations.append(current_invocation)
 
-                current_invocation = Invocation()
+                current_invocation = Invocation(len(self.invocations))
             elif page == -1:
                 current_subtrace = SubTrace()
             elif page == -2:
@@ -45,15 +48,36 @@ class Trace:
 
         self.dmatrix_nproc = dmatrix_nproc
 
+        print("Finding distinct invocations...")
+        self.generate_invocation_sets()
+
     def get_subtrace_count(self):
         return sum(len(invocation.subtraces) for invocation in self.invocations)
 
     def get_invocation_count(self):
         return len(self.invocations)
 
+    def get_invocation_set_count(self):
+        return len(self.invocation_sets)
+
+    def generate_invocation_sets(self):
+        self.invocation_sets = []
+
+        for invocation in self.invocations:
+            similar_found = False
+
+            for invocation_set in self.invocation_sets:
+                if invocation_set.belongs(invocation):
+                    invocation_set.add(invocation)
+                    similar_found = True
+                    break
+
+            if not similar_found:
+                self.invocation_sets.append(InvocationSet([invocation]))
+
     def get_distance_matrix(self, distance_function):
         if self.distance_matrix_generated == False:
-            n = self.get_invocation_count()
+            n = self.get_invocation_set_count()
             nprocs = min(n, self.dmatrix_nproc)
 
             # Generate distance matrix in parallel
@@ -69,23 +93,22 @@ class Trace:
         return self.distance_matrix
 
     def estimate_needed_memory(self):
-        return (self.get_invocation_count()**2) * 8 # 8 bytes per element (double)
+        return (self.get_invocation_set_count()**2) * 8 # 8 bytes per element (double)
 
 class Invocation:
-    def __init__(self):
+    def __init__(self, index):
+        self.id = index
         self.subtraces = []
+        self.pages = set()
 
     def add_subtrace(self, subtrace):
         self.subtraces.append(subtrace)
 
     def generate_pages(self):
-        pages = set()
-
         for trace in self.subtraces:
             for page in trace.pages:
-                pages.add(page)
-
-        self.pages = list(pages)
+                self.pages.add(page)
+        self.hash = hash(tuple(self.pages))
 
 class SubTrace:
     def __init__(self):
@@ -93,3 +116,16 @@ class SubTrace:
 
     def add_page(self, address):
         self.pages.append(address)
+
+# Set of Invocations which use the same memory pages
+class InvocationSet:
+    def __init__(self, invocations):
+        self.invocations = invocations
+        self.pages = invocations[0].pages
+        self.hash = invocations[0].hash
+
+    def add(self, invocation):
+        self.invocations.append(invocation)
+
+    def belongs(self, invocation):
+        return invocation.hash == self.hash
