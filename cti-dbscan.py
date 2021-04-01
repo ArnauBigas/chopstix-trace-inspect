@@ -45,6 +45,6 @@ for trace_file in args.trace_files:
 
     if not args.summary:
         for cluster in clusters:
-            print("Cluster %2d" % cluster)
+            print("Cluster %d" % cluster)
             print("----------")
             print(clusters[cluster])
