@@ -1,8 +1,6 @@
 import numpy as np
 from struct import iter_unpack
 from multiprocessing import Pool
-from threading import Lock
-from concurrent.futures import ThreadPoolExecutor
 from math import ceil
 import os
 
@@ -61,19 +59,16 @@ class Trace:
         return len(self.invocation_sets)
 
     def generate_invocation_sets(self):
-        self.invocation_sets = []
+        invocation_sets = {}
 
         for invocation in self.invocations:
-            similar_found = False
 
-            for invocation_set in self.invocation_sets:
-                if invocation_set.belongs(invocation):
-                    invocation_set.add(invocation)
-                    similar_found = True
-                    break
+            if invocation.hash in invocation_sets:
+                invocation_sets[invocation.hash].add(invocation)
+            else:
+                invocation_sets[invocation.hash] = InvocationSet([invocation])
 
-            if not similar_found:
-                self.invocation_sets.append(InvocationSet([invocation]))
+        self.invocation_sets = list(invocation_sets.values())
 
     def get_distance_matrix(self, distance_function):
         if self.distance_matrix_generated == False:
@@ -120,12 +115,9 @@ class SubTrace:
 # Set of Invocations which use the same memory pages
 class InvocationSet:
     def __init__(self, invocations):
-        self.invocations = invocations
+        self.invocations = [invocation.id for invocation in invocations]
         self.pages = invocations[0].pages
         self.hash = invocations[0].hash
 
     def add(self, invocation):
-        self.invocations.append(invocation)
-
-    def belongs(self, invocation):
-        return invocation.hash == self.hash
+        self.invocations.append(invocation.id)

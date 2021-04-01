@@ -41,7 +41,7 @@ for trace_file in args.trace_files:
         if label not in clusters:
             clusters[label] = []
 
-        clusters[label].append(i)
+        clusters[label].extend(trace.invocation_sets[i].invocations)
 
     if not args.summary:
         for cluster in clusters:
