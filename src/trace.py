@@ -3,6 +3,7 @@ from struct import iter_unpack
 from multiprocessing import Pool
 from math import ceil
 import os
+import gc
 
 def process_work(trace, start, end, n, distance_function):
     matrix = np.zeros((end - start, n), 'float32')
@@ -74,6 +75,10 @@ class Trace:
         if self.distance_matrix_generated == False:
             n = self.get_invocation_set_count()
             nprocs = min(n, self.dmatrix_nproc)
+
+            # Minimize memory usage
+            del self.invocations
+            gc.collect()
 
             # Generate distance matrix in parallel
             print("Generating distance matrix with %d threads" % nprocs)
