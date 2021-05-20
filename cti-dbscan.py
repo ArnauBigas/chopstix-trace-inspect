@@ -12,9 +12,8 @@ parser.add_argument('trace_files', nargs='+', help='Traces to cluster.')
 parser.add_argument('--num-threads', '-n', type=int, help='Number of threads to use during the clustering')
 parser.add_argument('--epsilon', '-e', type=float, help='Epsilon parameter to pass to the DBSCAN clusterer')
 parser.add_argument('--coverage', '-c', type=float, default=0.9, help='Unused.')
-parser.add_argument('--summary', '-s', action='store_true', help='Print summary instead of cluster indices')
-parser.add_argument('--random', '-r', action='store_true', help='Choose random invocation from invocation set')
 parser.add_argument('--max-memory', type=int, help="Don't use more than this amount of memory during clustering")
+parser.add_argument('--output', '-o', type=str, default='clusters.json', help="Output file")
 args = parser.parse_args()
 
 for trace_file in args.trace_files:
@@ -34,22 +33,6 @@ for trace_file in args.trace_files:
     if epsilon == None:
         epsilon = estimate_dbscan_epsilon(trace, args.coverage)
 
-    labels = dbscan(trace, epsilon)
+    cluster_info = dbscan(trace, epsilon)
 
-    clusters = {}
-    for i in range(len(labels)):
-        label = labels[i]
-
-        if label not in clusters:
-            clusters[label] = []
-
-        if args.random:
-            clusters[label].append(random.choice(trace.invocation_sets[i].invocations))
-        else:
-            clusters[label].extend(trace.invocation_sets[i].invocations)
-
-    if not args.summary:
-        for cluster in clusters:
-            print("Cluster %d" % cluster)
-            print("----------")
-            print(clusters[cluster])
+    cluster_info.to_file(args.output)

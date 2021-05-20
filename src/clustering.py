@@ -3,8 +3,70 @@ from sklearn.cluster import DBSCAN
 from sklearn import metrics
 import numpy as np
 import math
+import random
+import json
 
 from src.distance import disjoint_sets
+
+class ClusteringInformation:
+
+    def __init__(self, epsilon, clusters, noise_invocations):
+        self._epsilon = epsilon
+        self._clusters = clusters
+        self._noise_invocations = noise_invocations
+
+    def get_epsilon(self):
+        return self._epsilon
+
+    def get_invocation_count(self):
+        count = len(self._noise_invocations)
+
+        for cluster in self._clusters:
+            count += len(cluster)
+
+        return count
+
+    def get_cluster_count(self):
+        return len(self._clusters)
+
+    def get_all_invocations(self, cluster):
+        return self._clusters[cluster]
+
+    def get_random_invocation(self, cluster):
+        return random.choice(self._clusters[cluster])
+
+    def get_noise_invocation_count(self):
+        return len(self._noise_invocations)
+
+    def get_noise_invocations(self):
+        return self._noise_invocations
+
+    def get_cluster_id_for_invocation(self, invocation_id):
+        if invocation_id in self._noise_invocations:
+            return -1
+        else:
+            for cluster_id in range(len(self._clusters)):
+                if invocation_id in self._clusters[cluster_id]:
+                    return cluster_id
+        return None
+
+    def to_file(self, path):
+        json_obj = {
+            "epsilon": self._epsilon,
+            "clusters": self._clusters,
+            "noise_invocations": self._noise_invocations
+        }
+
+        with open(path, "w") as file:
+            json.dump(json_obj, file)
+
+    @staticmethod
+    def from_file(path):
+        with open(path, "r") as file:
+            json_obj = json.load(file)
+
+        return ClusteringInformation(json_obj['epsilon'], json_obj['clusters'], json_obj['noise_invocations'])
+
 
 def estimate_dbscan_epsilon(trace, coverage):
     n = trace.get_invocation_count()
@@ -43,4 +105,14 @@ def dbscan(trace, epsilon):
                                                     metric="precomputed")
         print("Silhouette Coefficient: %0.3f" % silhouette_score)
 
-    return labels
+    clusters = [[] for i in range(n_clusters_)]
+    noise_invocations = []
+    for i in range(len(labels)):
+        label = labels[i]
+
+        if label == -1:
+            noise_invocations.extend(trace.invocation_sets[i].invocations)
+        else:
+            clusters[label].extend(trace.invocation_sets[i].invocations)
+
+    return ClusteringInformation(epsilon, clusters, noise_invocations)
