@@ -10,8 +10,9 @@ from src.distance import disjoint_sets
 
 class ClusteringInformation:
 
-    def __init__(self, epsilon, clusters, noise_invocations):
+    def __init__(self, epsilon, invocation_sets, clusters, noise_invocations):
         self._epsilon = epsilon
+        self._invocation_sets = invocation_sets
         self._clusters = clusters
         self._noise_invocations = noise_invocations
 
@@ -19,40 +20,84 @@ class ClusteringInformation:
         return self._epsilon
 
     def get_invocation_count(self):
-        count = len(self._noise_invocations)
+        count = 0
 
-        for cluster in self._clusters:
-            count += len(cluster)
+        for invocation_set in self._invocation_sets:
+            count += len(invocation_set)
 
         return count
+
+    def get_invocation_set_count(self):
+        return len(self._invocation_sets)
 
     def get_cluster_count(self):
         return len(self._clusters)
 
-    def get_all_invocations(self, cluster):
-        return self._clusters[cluster]
+    def get_all_invocations_in_cluster(self, cluster):
+        invocations = []
 
-    def get_random_invocation(self, cluster):
-        return random.choice(self._clusters[cluster])
+        for invocation_set in self._clusters[cluster]:
+            invocations.extend(self._invocation_sets[invocation_set])
 
-    def get_noise_invocation_count(self):
+        return invocations
+
+    def get_random_invocation_in_cluster(self, cluster):
+        invocation_set = random.choice(self._clusters[cluster])
+        return random.choice(self._invocation_sets[invocation_set])
+
+    def get_noise_invocation_set_count(self):
         return len(self._noise_invocations)
 
-    def get_noise_invocations(self):
+    def get_noise_invocation_count(self):
+        count = 0
+
+        for invocation_set in self._noise_invocations:
+            count += len(self._invocation_sets[invocation_set])
+
+        return count
+
+    # Returns a random invocation from each of the invocation sets which
+    # are considered to be a noise point (i.e. don't belong to any cluster)
+    def get_random_noise_invocations(self):
+        invocations = []
+
+        for invocation_set in self._noise_invocations:
+            invocations.append(random.choice(self._invocation_sets[invocation_set]))
+
+        return invocations
+
+    # Returns all the invocations of all the invocation sets which are
+    # considered to be noise
+    def get_all_noise_invocations(self):
+        invocations = []
+
+        for invocation_set in self._noise_invocations:
+            invocations.extend(self._invocation_sets[invocation_set])
+
+        return invocations
+
+    def get_all_noise_invocation_sets(self):
         return self._noise_invocations
 
+    def get_all_invocations_in_invocation_set(self, invocation_set):
+        return self._invocation_sets[invocation_set]
+
     def get_cluster_id_for_invocation(self, invocation_id):
-        if invocation_id in self._noise_invocations:
-            return -1
-        else:
-            for cluster_id in range(len(self._clusters)):
-                if invocation_id in self._clusters[cluster_id]:
+        for invocation_set in self._noise_invocations:
+            if invocation_id in self._invocation_sets[invocation_set]:
+                return -1
+
+        for cluster_id in range(len(self._clusters)):
+            for invocation_set_id in self._clusters[cluster_id]:
+                if invocation_id in self._invocation_sets[invocation_set_id]:
                     return cluster_id
+
         return None
 
     def to_file(self, path):
         json_obj = {
             "epsilon": self._epsilon,
+            "invocation_sets": self._invocation_sets,
             "clusters": self._clusters,
             "noise_invocations": self._noise_invocations
         }
@@ -65,7 +110,7 @@ class ClusteringInformation:
         with open(path, "r") as file:
             json_obj = json.load(file)
 
-        return ClusteringInformation(json_obj['epsilon'], json_obj['clusters'], json_obj['noise_invocations'])
+        return ClusteringInformation(json_obj['epsilon'], json_obj['invocation_sets'], json_obj['clusters'], json_obj['noise_invocations'])
 
 
 def estimate_dbscan_epsilon(trace, coverage):
@@ -111,8 +156,10 @@ def dbscan(trace, epsilon):
         label = labels[i]
 
         if label == -1:
-            noise_invocations.extend(trace.invocation_sets[i].invocations)
+            noise_invocations.append(i)
         else:
-            clusters[label].extend(trace.invocation_sets[i].invocations)
+            clusters[label].append(i)
 
-    return ClusteringInformation(epsilon, clusters, noise_invocations)
+    invocation_sets = [invocation_set.invocations for invocation_set in trace.invocation_sets]
+
+    return ClusteringInformation(epsilon, invocation_sets, clusters, noise_invocations)
