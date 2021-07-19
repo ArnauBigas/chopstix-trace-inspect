@@ -1,5 +1,6 @@
 import os
 from sklearn.cluster import DBSCAN
+from dbscan1d.core import DBSCAN1D
 from sklearn import metrics
 import numpy as np
 import math
@@ -161,5 +162,30 @@ def dbscan(trace, epsilon):
             clusters[label].append(i)
 
     invocation_sets = [invocation_set.invocations for invocation_set in trace.invocation_sets]
+
+    return ClusteringInformation(epsilon, invocation_sets, clusters, noise_invocations)
+
+def dbscan_ipc(invocations, epsilon):
+    # init dbscan object
+    dbs = DBSCAN1D(eps=epsilon)
+
+    ipcs = np.array([invocation.metrics.ipc for invocation in invocations])
+    print(ipcs)
+
+    # get labels for each point
+    labels = dbs.fit_predict(ipcs)
+    cluster_count = len(set(labels)) - 1
+
+    clusters = [[i] for i in range(cluster_count)]
+    invocation_sets = [[] for i in range(cluster_count)]
+    noise_invocations = []
+    for i in range(len(labels)):
+        label = labels[i]
+
+        if label == -1:
+            invocation_sets.append([i])
+            noise_invocations.append(len(invocation_sets) - 1)
+        else:
+            invocation_sets[label].append(i)
 
     return ClusteringInformation(epsilon, invocation_sets, clusters, noise_invocations)
