@@ -174,7 +174,10 @@ def dbscan_ipc(invocations, epsilon):
 
     # get labels for each point
     labels = dbs.fit_predict(ipcs)
-    cluster_count = len(set(labels)) - 1
+    cluster_count = len(set(labels))
+
+    if -1 in labels:
+        cluster_count -= 1  # -1 represents noise points, not clusters
 
     clusters = [[i] for i in range(cluster_count)]
     invocation_sets = [[] for i in range(cluster_count)]
